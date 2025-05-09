@@ -6,6 +6,7 @@ import { store } from './src/shared/redux/store';
 import { CryptoListScreen } from './src/features/crypto/screens/CryptoListScreen';
 import { CryptoDetailScreen } from './src/features/crypto/screens/CryptoDetailScreen';
 import { StatusBar } from 'expo-status-bar';
+import { SimulateAlertButton } from './src/features/crypto/components/SimulateAlertButton';
 
 const Stack = createNativeStackNavigator();
 
@@ -29,7 +30,10 @@ export default function App() {
           <Stack.Screen
             name="CryptoList"
             component={CryptoListScreen}
-            options={{ title: 'Cryptocurrency List' }}
+            options={{
+              title: 'Cryptocurrency List',
+              headerRight: () => <SimulateAlertButton />
+            }}
           />
           <Stack.Screen
             name="CryptoDetail"

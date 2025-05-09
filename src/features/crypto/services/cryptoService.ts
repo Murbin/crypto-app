@@ -1,5 +1,6 @@
 import axios from 'axios';
 import Constants from 'expo-constants';
+import * as Crypto from 'expo-crypto';
 
 export interface CryptoResponse {
     id: string;
@@ -10,6 +11,7 @@ export interface CryptoResponse {
     market_cap_rank: number;
     image: string;
     price_change_percentage_24h: number;
+    dataHash?: string; // Hash para verificación de integridad
 }
 
 export class CryptoService {
@@ -28,6 +30,41 @@ export class CryptoService {
         return CryptoService.instance;
     }
 
+    private async generateDataHash(data: any): Promise<string> {
+        const dataString = JSON.stringify(data);
+        return await Crypto.digestStringAsync(
+            Crypto.CryptoDigestAlgorithm.SHA256,
+            dataString
+        );
+    }
+
+    private async verifyDataIntegrity(data: CryptoResponse[]): Promise<boolean> {
+        for (const crypto of data) {
+            if (!crypto.dataHash) continue;
+
+            const { dataHash, ...cryptoData } = crypto;
+            const calculatedHash = await this.generateDataHash(cryptoData);
+
+            if (calculatedHash !== dataHash) {
+                console.warn(`Data integrity check failed for ${crypto.name}`);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    // Nueva función para verificar manualmente una criptomoneda específica
+    public async verifyCryptoIntegrity(crypto: CryptoResponse): Promise<{ isValid: boolean; currentHash: string; storedHash: string }> {
+        const { dataHash, ...cryptoData } = crypto;
+        const currentHash = await this.generateDataHash(cryptoData);
+
+        return {
+            isValid: currentHash === dataHash,
+            currentHash,
+            storedHash: dataHash || 'No hash stored'
+        };
+    }
+
     public async fetchCryptos(page: number = 1): Promise<{ data: CryptoResponse[], page: number }> {
         try {
             await this.delay(100);
@@ -43,7 +80,22 @@ export class CryptoService {
                     },
                 }
             );
-            return { data: response.data, page };
+
+            // Generar hash para cada criptomoneda
+            const dataWithHashes = await Promise.all(
+                response.data.map(async (crypto: CryptoResponse) => {
+                    const dataHash = await this.generateDataHash(crypto);
+                    return { ...crypto, dataHash };
+                })
+            );
+
+            // Verificar integridad de los datos
+            const isDataValid = await this.verifyDataIntegrity(dataWithHashes);
+            if (!isDataValid) {
+                throw new Error('Data integrity verification failed');
+            }
+
+            return { data: dataWithHashes, page };
         } catch (error: any) {
             if (error.response?.status === 429) {
                 throw new Error('Rate limit exceeded. Retrying...');

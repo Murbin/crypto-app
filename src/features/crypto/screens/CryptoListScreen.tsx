@@ -10,6 +10,7 @@ import { LoadingState } from '../components/LoadingState';
 import { ErrorState } from '../components/ErrorState';
 import { LoadingFooter } from '../components/LoadingFooter';
 import { CryptoFilters } from '../components/CryptoFilters';
+import { SecurityAlerts } from '../components/SecurityAlerts';
 
 /**
  * CryptoListScreen Component
@@ -154,6 +155,7 @@ export const CryptoListScreen = () => {
 
     return (
         <View className="flex-1 bg-gray-50">
+            <SecurityAlerts />
             <TextInput
                 className="mx-4 my-2 p-3 bg-white rounded-lg border border-gray-200 shadow-sm"
                 placeholder="Search cryptocurrencies..."

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
     View,
     Text,
@@ -6,11 +6,20 @@ import {
     Image,
     ScrollView,
     SafeAreaView,
+    TouchableOpacity,
+    ActivityIndicator,
 } from 'react-native';
 import { useAppSelector } from '../../../shared/hooks/useRedux';
+import { CryptoService } from '../services/cryptoService';
 
 export const CryptoDetailScreen = () => {
     const { selectedCrypto } = useAppSelector((state) => state.crypto);
+    const [verificationResult, setVerificationResult] = useState<{
+        isValid: boolean;
+        currentHash: string;
+        storedHash: string;
+    } | null>(null);
+    const [isVerifying, setIsVerifying] = useState(false);
 
     if (!selectedCrypto) {
         return (
@@ -19,6 +28,19 @@ export const CryptoDetailScreen = () => {
             </View>
         );
     }
+
+    const handleVerifyIntegrity = async () => {
+        setIsVerifying(true);
+        try {
+            const cryptoService = CryptoService.getInstance();
+            const result = await cryptoService.verifyCryptoIntegrity(selectedCrypto);
+            setVerificationResult(result);
+        } catch (error) {
+            console.error('Error verifying integrity:', error);
+        } finally {
+            setIsVerifying(false);
+        }
+    };
 
     return (
         <SafeAreaView style={styles.container}>
@@ -67,6 +89,38 @@ export const CryptoDetailScreen = () => {
                             {selectedCrypto.price_change_percentage_24h.toFixed(2)}%
                         </Text>
                     </View>
+
+                    {/* Botón de verificación y resultados */}
+                    <TouchableOpacity
+                        style={styles.verifyButton}
+                        onPress={handleVerifyIntegrity}
+                        disabled={isVerifying}
+                    >
+                        {isVerifying ? (
+                            <ActivityIndicator color="#fff" />
+                        ) : (
+                            <Text style={styles.verifyButtonText}>
+                                Verify Data Integrity
+                            </Text>
+                        )}
+                    </TouchableOpacity>
+
+                    {verificationResult && (
+                        <View style={styles.verificationResult}>
+                            <Text style={[
+                                styles.verificationStatus,
+                                verificationResult.isValid ? styles.valid : styles.invalid
+                            ]}>
+                                {verificationResult.isValid ? '✓ Data is Valid' : '✗ Data is Invalid'}
+                            </Text>
+                            <Text style={styles.hashText}>
+                                Current Hash: {verificationResult.currentHash.substring(0, 20)}...
+                            </Text>
+                            <Text style={styles.hashText}>
+                                Stored Hash: {verificationResult.storedHash.substring(0, 20)}...
+                            </Text>
+                        </View>
+                    )}
                 </View>
             </ScrollView>
         </SafeAreaView>
@@ -139,5 +193,40 @@ const styles = StyleSheet.create({
     },
     negativeChange: {
         color: '#F44336',
+    },
+    verifyButton: {
+        backgroundColor: '#2196F3',
+        padding: 15,
+        borderRadius: 8,
+        marginTop: 20,
+        alignItems: 'center',
+    },
+    verifyButtonText: {
+        color: 'white',
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    verificationResult: {
+        marginTop: 20,
+        padding: 15,
+        backgroundColor: '#f8f9fa',
+        borderRadius: 8,
+    },
+    verificationStatus: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginBottom: 10,
+    },
+    valid: {
+        color: '#4CAF50',
+    },
+    invalid: {
+        color: '#F44336',
+    },
+    hashText: {
+        fontSize: 12,
+        color: '#666',
+        marginTop: 5,
+        fontFamily: 'monospace',
     },
 }); 

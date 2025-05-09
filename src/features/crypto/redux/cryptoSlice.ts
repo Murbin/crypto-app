@@ -3,6 +3,14 @@ import { CryptoService, CryptoResponse } from '../services/cryptoService';
 
 export type Crypto = CryptoResponse;
 
+interface SecurityAlert {
+    id: string;
+    type: 'price_spike' | 'price_drop' | 'data_integrity';
+    message: string;
+    timestamp: number;
+    severity: 'high' | 'medium' | 'low';
+}
+
 interface CryptoState {
     cryptos: Crypto[];
     filteredCryptos: Crypto[];
@@ -13,6 +21,7 @@ interface CryptoState {
     page: number;
     hasMore: boolean;
     retryCount: number;
+    securityAlerts: SecurityAlert[];
 }
 
 const initialState: CryptoState = {
@@ -25,7 +34,10 @@ const initialState: CryptoState = {
     page: 1,
     hasMore: true,
     retryCount: 0,
+    securityAlerts: [],
 };
+
+const PRICE_CHANGE_THRESHOLD = 10; // 10% change threshold for alerts
 
 export const fetchCryptos = createAsyncThunk(
     'crypto/fetchCryptos',
@@ -71,6 +83,12 @@ const cryptoSlice = createSlice({
             state.filteredCryptos = [];
             state.retryCount = 0;
         },
+        clearSecurityAlerts: (state) => {
+            state.securityAlerts = [];
+        },
+        addSecurityAlert: (state, action) => {
+            state.securityAlerts.push(action.payload);
+        },
     },
     extraReducers: (builder) => {
         builder
@@ -86,15 +104,38 @@ const cryptoSlice = createSlice({
                 state.loading = false;
                 state.loadingMore = false;
                 state.retryCount = 0;
+
+                // Verificar cambios significativos en los precios
+                const newData = action.payload.data;
+                const oldData = state.cryptos;
+
+                newData.forEach((newCrypto) => {
+                    const oldCrypto = oldData.find(c => c.id === newCrypto.id);
+                    if (oldCrypto) {
+                        const priceChange = Math.abs(newCrypto.price_change_percentage_24h - oldCrypto.price_change_percentage_24h);
+
+                        if (priceChange > PRICE_CHANGE_THRESHOLD) {
+                            const alert: SecurityAlert = {
+                                id: `${newCrypto.id}-${Date.now()}`,
+                                type: newCrypto.price_change_percentage_24h > oldCrypto.price_change_percentage_24h ? 'price_spike' : 'price_drop',
+                                message: `Significant price change detected for ${newCrypto.name}: ${priceChange.toFixed(2)}%`,
+                                timestamp: Date.now(),
+                                severity: priceChange > PRICE_CHANGE_THRESHOLD * 2 ? 'high' : 'medium'
+                            };
+                            state.securityAlerts.push(alert);
+                        }
+                    }
+                });
+
                 if (action.payload.page === 1) {
-                    state.cryptos = action.payload.data;
-                    state.filteredCryptos = action.payload.data;
+                    state.cryptos = newData;
+                    state.filteredCryptos = newData;
                 } else {
-                    state.cryptos = [...state.cryptos, ...action.payload.data];
-                    state.filteredCryptos = [...state.filteredCryptos, ...action.payload.data];
+                    state.cryptos = [...state.cryptos, ...newData];
+                    state.filteredCryptos = [...state.filteredCryptos, ...newData];
                 }
                 state.page = action.payload.page;
-                state.hasMore = action.payload.data.length === 20;
+                state.hasMore = newData.length === 20;
             })
             .addCase(fetchCryptos.rejected, (state, action) => {
                 state.loading = false;
@@ -104,10 +145,19 @@ const cryptoSlice = createSlice({
                     state.error = `Rate limit exceeded. Retry attempt ${state.retryCount} of 3`;
                 } else {
                     state.error = action.payload as string;
+                    // Agregar alerta de seguridad para errores
+                    const alert: SecurityAlert = {
+                        id: `error-${Date.now()}`,
+                        type: 'data_integrity',
+                        message: `Data integrity issue detected: ${action.payload}`,
+                        timestamp: Date.now(),
+                        severity: 'high'
+                    };
+                    state.securityAlerts.push(alert);
                 }
             });
     },
 });
 
-export const { filterCryptos, selectCrypto, resetPagination } = cryptoSlice.actions;
+export const { filterCryptos, selectCrypto, resetPagination, clearSecurityAlerts, addSecurityAlert } = cryptoSlice.actions;
 export default cryptoSlice.reducer; 
