@@ -32,7 +32,7 @@ export default function App() {
             component={CryptoListScreen}
             options={{
               title: 'Cryptocurrency List',
-              headerRight: () => <SimulateAlertButton />
+
             }}
           />
           <Stack.Screen
