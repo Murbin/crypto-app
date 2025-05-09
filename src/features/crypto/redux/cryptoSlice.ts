@@ -1,16 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import axios from 'axios';
+import { CryptoService, CryptoResponse } from '../services/cryptoService';
 
-export interface Crypto {
-    id: string;
-    symbol: string;
-    name: string;
-    current_price: number;
-    market_cap: number;
-    market_cap_rank: number;
-    image: string;
-    price_change_percentage_24h: number;
-}
+export type Crypto = CryptoResponse;
 
 interface CryptoState {
     cryptos: Crypto[];
@@ -36,37 +27,20 @@ const initialState: CryptoState = {
     retryCount: 0,
 };
 
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
 export const fetchCryptos = createAsyncThunk(
     'crypto/fetchCryptos',
     async (page: number = 1, { getState, rejectWithValue }) => {
         try {
-            // Add minimal delay between requests to avoid rate limiting
-            await delay(100);
-
-            const response = await axios.get(
-                'https://api.coingecko.com/api/v3/coins/markets',
-                {
-                    params: {
-                        vs_currency: 'usd',
-                        per_page: 20,
-                        page: page,
-                        sparkline: false,
-                    },
-                }
-            );
-            return { data: response.data, page };
+            const cryptoService = CryptoService.getInstance();
+            return await cryptoService.fetchCryptos(page);
         } catch (error: any) {
-            if (error.response?.status === 429) {
+            if (error.message === 'Rate limit exceeded. Retrying...') {
                 const state = getState() as { crypto: CryptoState };
                 if (state.crypto.retryCount < 3) {
-                    // Wait longer between retries
-                    await delay(1000 * (state.crypto.retryCount + 1));
                     return rejectWithValue('Rate limit exceeded. Retrying...');
                 }
             }
-            return rejectWithValue(error.response?.data?.error || 'Failed to fetch cryptos');
+            return rejectWithValue(error.message);
         }
     }
 );
