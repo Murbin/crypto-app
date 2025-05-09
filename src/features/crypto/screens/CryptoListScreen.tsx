@@ -9,6 +9,20 @@ import { EmptyState } from '../components/EmptyState';
 import { LoadingState } from '../components/LoadingState';
 import { ErrorState } from '../components/ErrorState';
 
+/**
+ * CryptoListScreen Component
+ * 
+ * Main screen that displays a list of cryptocurrencies with search functionality.
+ * Features:
+ * - Real-time cryptocurrency data display
+ * - Search functionality
+ * - Pull-to-refresh
+ * - Error handling
+ * - Loading states
+ * 
+ * @component
+ * @returns {JSX.Element} The rendered component
+ */
 export const CryptoListScreen = () => {
     const dispatch = useAppDispatch();
     const navigation = useNavigation();
@@ -20,16 +34,34 @@ export const CryptoListScreen = () => {
         dispatch(fetchCryptos());
     }, [dispatch]);
 
+    /**
+     * Handles the search functionality
+     * Updates the search term and filters the cryptocurrency list
+     * 
+     * @param {string} text - The search term entered by the user
+     */
     const handleSearch = useCallback((text: string) => {
         setSearchTerm(text);
         dispatch(filterCryptos(text));
     }, [dispatch]);
 
+    /**
+     * Handles the selection of a cryptocurrency
+     * Dispatches the selected crypto to the store and navigates to detail screen
+     * 
+     * @param {Crypto} crypto - The selected cryptocurrency object
+     */
     const handleCryptoPress = useCallback((crypto: Crypto) => {
         dispatch(selectCrypto(crypto));
         navigation.navigate('CryptoDetail' as never);
     }, [dispatch, navigation]);
 
+    /**
+     * Renders a single cryptocurrency item
+     * 
+     * @param {{ item: Crypto }} param0 - The cryptocurrency item to render
+     * @returns {JSX.Element} The rendered CryptoItem component
+     */
     const renderItem = useCallback(({ item }: { item: Crypto }) => (
         <CryptoItem
             item={item}
@@ -37,8 +69,18 @@ export const CryptoListScreen = () => {
         />
     ), [handleCryptoPress]);
 
+    /**
+     * Extracts a unique key for each cryptocurrency item
+     * 
+     * @param {Crypto} item - The cryptocurrency item
+     * @returns {string} The unique identifier
+     */
     const keyExtractor = useCallback((item: Crypto) => item.id, []);
 
+    /**
+     * Handles the pull-to-refresh functionality
+     * Fetches fresh cryptocurrency data
+     */
     const handleRefresh = useCallback(async () => {
         setRefreshing(true);
         await dispatch(fetchCryptos());

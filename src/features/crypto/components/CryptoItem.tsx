@@ -2,11 +2,31 @@ import React, { memo } from 'react';
 import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { Crypto } from '../redux/cryptoSlice';
 
+/**
+ * Props interface for the CryptoItem component
+ * @interface CryptoItemProps
+ * @property {Crypto} item - The cryptocurrency data to display
+ * @property {() => void} onPress - Callback function when the item is pressed
+ */
 interface CryptoItemProps {
     item: Crypto;
     onPress: () => void;
 }
 
+/**
+ * CryptoItem Component
+ * 
+ * Displays a single cryptocurrency item in the list with its:
+ * - Logo
+ * - Name
+ * - Symbol
+ * - Current price
+ * - 24h price change percentage
+ * 
+ * @component
+ * @param {CryptoItemProps} props - The component props
+ * @returns {JSX.Element} The rendered component
+ */
 export const CryptoItem = memo(({ item, onPress }: CryptoItemProps) => (
     <TouchableOpacity
         className="flex-row p-4 bg-white my-1 rounded-lg items-center shadow-sm"
