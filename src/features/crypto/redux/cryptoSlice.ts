@@ -50,12 +50,16 @@ const cryptoSlice = createSlice({
     initialState,
     reducers: {
         filterCryptos: (state, action) => {
-            const searchTerm = action.payload.toLowerCase();
-            state.filteredCryptos = state.cryptos.filter(
-                crypto =>
-                    crypto.name.toLowerCase().includes(searchTerm) ||
-                    crypto.symbol.toLowerCase().includes(searchTerm)
-            );
+            if (typeof action.payload === 'string') {
+                const searchTerm = action.payload.toLowerCase();
+                state.filteredCryptos = state.cryptos.filter(
+                    crypto =>
+                        crypto.name.toLowerCase().includes(searchTerm) ||
+                        crypto.symbol.toLowerCase().includes(searchTerm)
+                );
+            } else {
+                state.filteredCryptos = action.payload;
+            }
         },
         selectCrypto: (state, action) => {
             state.selectedCrypto = action.payload;

@@ -9,6 +9,7 @@ import { EmptyState } from '../components/EmptyState';
 import { LoadingState } from '../components/LoadingState';
 import { ErrorState } from '../components/ErrorState';
 import { LoadingFooter } from '../components/LoadingFooter';
+import { CryptoFilters } from '../components/CryptoFilters';
 
 /**
  * CryptoListScreen Component
@@ -31,6 +32,7 @@ export const CryptoListScreen = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [refreshing, setRefreshing] = useState(false);
     const [showLoadingFooter, setShowLoadingFooter] = useState(false);
+    const [activeFilter, setActiveFilter] = useState('all');
     const loadMoreTimeout = useRef<NodeJS.Timeout>();
 
     useEffect(() => {
@@ -113,6 +115,29 @@ export const CryptoListScreen = () => {
         dispatch(fetchCryptos(page));
     }, [dispatch, page]);
 
+    const handleFilterChange = useCallback((filter: string) => {
+        setActiveFilter(filter);
+        let filtered = [...filteredCryptos];
+
+        switch (filter) {
+            case 'top':
+                filtered = filtered.sort((a, b) => a.market_cap_rank - b.market_cap_rank);
+                break;
+            case 'gainers':
+                filtered = filtered.filter(crypto => crypto.price_change_percentage_24h > 0)
+                    .sort((a, b) => b.price_change_percentage_24h - a.price_change_percentage_24h);
+                break;
+            case 'losers':
+                filtered = filtered.filter(crypto => crypto.price_change_percentage_24h < 0)
+                    .sort((a, b) => a.price_change_percentage_24h - b.price_change_percentage_24h);
+                break;
+            default:
+                filtered = filtered.sort((a, b) => a.market_cap_rank - b.market_cap_rank);
+        }
+
+        dispatch(filterCryptos(filtered));
+    }, [dispatch, filteredCryptos]);
+
     if (loading && !refreshing && page === 1) {
         return <LoadingState />;
     }
@@ -128,16 +153,17 @@ export const CryptoListScreen = () => {
     }
 
     return (
-        <View className="flex-1 bg-background">
+        <View className="flex-1 bg-gray-50">
             <TextInput
                 className="mx-4 my-2 p-3 bg-white rounded-lg border border-gray-200 shadow-sm"
                 placeholder="Search cryptocurrencies..."
                 value={searchTerm}
                 onChangeText={handleSearch}
                 returnKeyType="search"
-                clearButtonMode="while-editing"
-                autoCorrect={false}
-                autoCapitalize="none"
+            />
+            <CryptoFilters
+                activeFilter={activeFilter}
+                onFilterChange={handleFilterChange}
             />
             <FlashList
                 data={filteredCryptos}
